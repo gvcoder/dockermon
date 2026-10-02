@@ -1,0 +1,248 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
+import '../models/container_info.dart';
+import '../models/container_profile.dart';
+import '../services/docker_service.dart';
+
+enum StatusFilter { all, running, stopped, paused }
+
+class DockerProvider extends ChangeNotifier {
+  final DockerService _dockerService = DockerService();
+
+  DockerHealthResult _health = DockerHealthResult(DockerHealthState.ok, 'Checking...');
+  DockerHealthResult get health => _health;
+
+  List<ContainerInfo> _containers = [];
+  List<ContainerInfo> get containers => _containers;
+
+  String _searchQuery = '';
+  String get searchQuery => _searchQuery;
+
+  StatusFilter _selectedFilter = StatusFilter.all;
+  StatusFilter get selectedFilter => _selectedFilter;
+
+  bool _isRefreshing = false;
+  bool get isRefreshing => _isRefreshing;
+
+  bool _autoRefreshEnabled = true;
+  bool get autoRefreshEnabled => _autoRefreshEnabled;
+
+  String? _errorMessage;
+  String? get errorMessage => _errorMessage;
+
+  final Map<String, String> _actionLoadingMap = {};
+  Map<String, String> get actionLoadingMap => Map.unmodifiable(_actionLoadingMap);
+
+  Timer? _pollingTimer;
+
+  DockerProvider() {
+    init();
+  }
+
+  Future<void> init() async {
+    await checkHealthAndRefresh();
+    _startPolling();
+  }
+
+  void _startPolling() {
+    _pollingTimer?.cancel();
+    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      if (_autoRefreshEnabled && !_isRefreshing && _health.state == DockerHealthState.ok) {
+        refreshContainers(silent: true);
+      }
+    });
+  }
+
+  void toggleAutoRefresh() {
+    _autoRefreshEnabled = !_autoRefreshEnabled;
+    if (_autoRefreshEnabled) {
+      _startPolling();
+    } else {
+      _pollingTimer?.cancel();
+    }
+    notifyListeners();
+  }
+
+  Future<void> checkHealthAndRefresh() async {
+    _isRefreshing = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      _health = await _dockerService.checkHealth();
+      if (_health.state == DockerHealthState.ok) {
+        await refreshContainers(silent: true);
+      }
+    } catch (e) {
+      _errorMessage = e.toString();
+    } finally {
+      _isRefreshing = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> refreshContainers({bool silent = false}) async {
+    if (!silent) {
+      _isRefreshing = true;
+      notifyListeners();
+    }
+
+    try {
+      final updatedList = await _dockerService.getContainers();
+      _containers = updatedList;
+      _errorMessage = null;
+    } catch (e) {
+      _errorMessage = e.toString();
+      // Re-verify health on fetch error
+      _health = await _dockerService.checkHealth();
+    } finally {
+      if (!silent) {
+        _isRefreshing = false;
+      }
+      notifyListeners();
+    }
+  }
+
+  void setSearchQuery(String query) {
+    _searchQuery = query.trim().toLowerCase();
+    notifyListeners();
+  }
+
+  void setStatusFilter(StatusFilter filter) {
+    _selectedFilter = filter;
+    notifyListeners();
+  }
+
+  List<ContainerInfo> get filteredContainers {
+    return _containers.where((c) {
+      // Status Filter
+      if (_selectedFilter == StatusFilter.running && !c.isRunning) return false;
+      if (_selectedFilter == StatusFilter.stopped && !c.isStopped) return false;
+      if (_selectedFilter == StatusFilter.paused && c.state != ContainerState.paused) return false;
+
+      // Text Search Filter (name, id, image, status)
+      if (_searchQuery.isNotEmpty) {
+        final matchesName = c.name.toLowerCase().contains(_searchQuery);
+        final matchesId = c.id.toLowerCase().contains(_searchQuery);
+        final matchesImage = c.image.toLowerCase().contains(_searchQuery);
+        final matchesStatus = c.status.toLowerCase().contains(_searchQuery);
+        return matchesName || matchesId || matchesImage || matchesStatus;
+      }
+
+      return true;
+    }).toList();
+  }
+
+  int get totalCount => _containers.length;
+  int get runningCount => _containers.where((c) => c.isRunning).length;
+  int get stoppedCount => _containers.where((c) => c.isStopped).length;
+  int get pausedCount => _containers.where((c) => c.state == ContainerState.paused).length;
+
+  bool isActionLoading(String containerId) => _actionLoadingMap.containsKey(containerId);
+  String? getActionType(String containerId) => _actionLoadingMap[containerId];
+
+  Future<void> startContainer(String id) async {
+    _actionLoadingMap[id] = 'starting';
+    notifyListeners();
+
+    try {
+      await _dockerService.startContainer(id);
+      await refreshContainers(silent: true);
+    } catch (e) {
+      _errorMessage = 'Failed to start container $id: $e';
+    } finally {
+      _actionLoadingMap.remove(id);
+      notifyListeners();
+    }
+  }
+
+  Future<void> stopContainer(String id) async {
+    _actionLoadingMap[id] = 'stopping';
+    notifyListeners();
+
+    try {
+      await _dockerService.stopContainer(id);
+      await refreshContainers(silent: true);
+    } catch (e) {
+      _errorMessage = 'Failed to stop container $id: $e';
+    } finally {
+      _actionLoadingMap.remove(id);
+      notifyListeners();
+    }
+  }
+
+  Future<void> restartContainer(String id) async {
+    _actionLoadingMap[id] = 'restarting';
+    notifyListeners();
+
+    try {
+      await _dockerService.restartContainer(id);
+      await refreshContainers(silent: true);
+    } catch (e) {
+      _errorMessage = 'Failed to restart container $id: $e';
+    } finally {
+      _actionLoadingMap.remove(id);
+      notifyListeners();
+    }
+  }
+
+  Future<String> fetchLogs(String id) {
+    return _dockerService.getLogs(id);
+  }
+
+  Future<String> fetchInspect(String id) {
+    return _dockerService.inspectContainer(id);
+  }
+
+  final List<ContainerProfile> _customProfiles = [];
+  List<ContainerProfile> get allProfiles => [
+        ...ContainerProfile.builtInProfiles,
+        ..._customProfiles,
+      ];
+
+  void saveCustomProfile(ContainerProfile profile) {
+    _customProfiles.add(profile);
+    notifyListeners();
+  }
+
+  Future<void> launchContainer(ContainerProfile profile, {String? customName}) async {
+    _isRefreshing = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _dockerService.runContainer(profile, customName: customName);
+      await refreshContainers(silent: true);
+    } catch (e) {
+      _errorMessage = 'Failed to launch container: $e';
+      rethrow;
+    } finally {
+      _isRefreshing = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> openContainerShell(String id) async {
+    try {
+      await _dockerService.openContainerShell(id);
+    } catch (e) {
+      _errorMessage = 'Failed to open terminal shell: $e';
+      notifyListeners();
+    }
+  }
+
+  Future<void> runInteractiveShell({required String image, String? customName, String command = 'sh'}) async {
+    try {
+      await _dockerService.runInteractiveShell(image: image, customName: customName, command: command);
+    } catch (e) {
+      _errorMessage = 'Failed to run interactive shell: $e';
+      notifyListeners();
+    }
+  }
+
+  @override
+  void dispose() {
+    _pollingTimer?.cancel();
+    super.dispose();
+  }
+}
