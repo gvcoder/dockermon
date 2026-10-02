@@ -1,6 +1,6 @@
 # dockermon
 
-A new Flutter project.
+Docker Monitor for Linux
 
 ## Getting Started
 
