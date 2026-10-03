@@ -228,14 +228,17 @@ class DockerService {
       throw Exception('No terminal emulator (x-terminal-emulator/xterm) found on system.');
     }
 
-    String execCmd;
+    final innerCmd = 'docker exec -it $id sh || docker exec -it $id bash || docker exec -it $id ash';
+    final script = '$innerCmd; echo; echo "[DockerMon] Container shell session finished."; read -p "Press Enter to close window..."';
+
+    String launchCmd;
     if (term == 'gnome-terminal') {
-      execCmd = '$term -- title "DockerMon Shell - $id" -- docker exec -it $id $shell';
+      launchCmd = '$term -- title "DockerMon Shell - $id" -- sh -c \'$script\'';
     } else {
-      execCmd = '$term -e docker exec -it $id $shell';
+      launchCmd = '$term -e "sh -c \'$script\'"';
     }
 
-    await Process.start('sh', ['-c', execCmd], runInShell: true);
+    await Process.start('sh', ['-c', launchCmd], runInShell: true);
   }
 
   /// Run a new container interactively in a separate terminal window
@@ -254,13 +257,30 @@ class DockerService {
         : '';
     final cmd = command.trim().isEmpty ? 'sh' : command.trim();
 
-    String runCmd;
+    final innerCmd = 'docker run -it --rm $nameFlag $image $cmd';
+    final script = '$innerCmd; echo; echo "[DockerMon] Interactive container exited."; read -p "Press Enter to close window..."';
+
+    String launchCmd;
     if (term == 'gnome-terminal') {
-      runCmd = '$term -- title "DockerMon Shell - $image" -- docker run -it --rm $nameFlag $image $cmd';
+      launchCmd = '$term -- title "DockerMon Interactive - $image" -- sh -c \'$script\'';
     } else {
-      runCmd = '$term -e docker run -it --rm $nameFlag $image $cmd';
+      launchCmd = '$term -e "sh -c \'$script\'"';
     }
 
-    await Process.start('sh', ['-c', runCmd], runInShell: true);
+    await Process.start('sh', ['-c', launchCmd], runInShell: true);
+  }
+
+  /// Execute a non-interactive command inside a container (In-App Exec Console)
+  Future<String> execCommand(String id, String command) async {
+    try {
+      final results = await _shell.run('docker exec $id $command');
+      if (results.isEmpty) return 'No output returned.';
+      final stdout = results.first.stdout.toString();
+      final stderr = results.first.stderr.toString();
+      final combined = '$stdout\n$stderr'.trim();
+      return combined.isEmpty ? 'Command executed cleanly.' : combined;
+    } catch (e) {
+      return 'Error executing command: $e';
+    }
   }
 }

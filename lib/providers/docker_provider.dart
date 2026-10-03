@@ -240,6 +240,10 @@ class DockerProvider extends ChangeNotifier {
     }
   }
 
+  Future<String> execCommand(String id, String command) {
+    return _dockerService.execCommand(id, command);
+  }
+
   @override
   void dispose() {
     _pollingTimer?.cancel();
