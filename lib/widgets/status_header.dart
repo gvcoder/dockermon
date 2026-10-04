@@ -151,6 +151,22 @@ class StatusHeader extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
 
+                  // Prune Stopped Containers Button (visible when stopped containers exist)
+                  if (provider.stoppedCount > 0) ...[
+                    OutlinedButton.icon(
+                      onPressed: () => _confirmPruneContainers(context, provider),
+                      icon: const Icon(Icons.cleaning_services_rounded, size: 16),
+                      label: Text('Prune Stopped (${provider.stoppedCount})'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFFFF5252),
+                        side: BorderSide(color: const Color(0xFFFF5252).withOpacity(0.4)),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+
                   // Launch Container Button
                   ElevatedButton.icon(
                     onPressed: healthState == DockerHealthState.ok
@@ -326,6 +342,46 @@ class StatusHeader extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmPruneContainers(BuildContext context, DockerProvider provider) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E222D),
+        title: const Row(
+          children: [
+            Icon(Icons.cleaning_services_rounded, color: Color(0xFFFF5252), size: 24),
+            SizedBox(width: 10),
+            Text(
+              'Prune Stopped Containers?',
+              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: Text(
+          'This will permanently delete all ${provider.stoppedCount} stopped container(s) (docker container prune -f).\n\nRunning containers will not be affected. Proceed?',
+          style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 13, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text('Cancel', style: TextStyle(color: Colors.white.withOpacity(0.6))),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              provider.pruneContainers();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF5252),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Prune All Stopped'),
           ),
         ],
       ),

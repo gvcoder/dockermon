@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 class ContainerProfile {
   final String id;
   final String profileName;

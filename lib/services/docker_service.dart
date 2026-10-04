@@ -283,4 +283,23 @@ class DockerService {
       return 'Error executing command: $e';
     }
   }
+
+  /// Remove a container by ID or Name
+  Future<void> removeContainer(String id, {bool force = false}) async {
+    final flag = force ? '-f' : '';
+    final results = await _shell.run('docker rm $flag $id');
+    if (results.isEmpty || results.first.exitCode != 0) {
+      final stderr = results.first.stderr.toString();
+      throw Exception(stderr.isNotEmpty ? stderr : 'Failed to remove container $id');
+    }
+  }
+
+  /// Remove all stopped containers
+  Future<void> pruneContainers() async {
+    final results = await _shell.run('docker container prune -f');
+    if (results.isEmpty || results.first.exitCode != 0) {
+      final stderr = results.first.stderr.toString();
+      throw Exception(stderr.isNotEmpty ? stderr : 'Failed to prune stopped containers.');
+    }
+  }
 }

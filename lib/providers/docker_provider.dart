@@ -244,6 +244,36 @@ class DockerProvider extends ChangeNotifier {
     return _dockerService.execCommand(id, command);
   }
 
+  Future<void> removeContainer(String id, {bool force = false}) async {
+    _actionLoadingMap[id] = 'removing';
+    notifyListeners();
+
+    try {
+      await _dockerService.removeContainer(id, force: force);
+      await refreshContainers(silent: true);
+    } catch (e) {
+      _errorMessage = 'Failed to remove container $id: $e';
+    } finally {
+      _actionLoadingMap.remove(id);
+      notifyListeners();
+    }
+  }
+
+  Future<void> pruneContainers() async {
+    _isRefreshing = true;
+    notifyListeners();
+
+    try {
+      await _dockerService.pruneContainers();
+      await refreshContainers(silent: true);
+    } catch (e) {
+      _errorMessage = 'Failed to prune containers: $e';
+    } finally {
+      _isRefreshing = false;
+      notifyListeners();
+    }
+  }
+
   @override
   void dispose() {
     _pollingTimer?.cancel();

@@ -209,7 +209,62 @@ class ContainerCard extends StatelessWidget {
                 tooltip: 'View Logs & Inspect JSON',
                 hoverColor: Colors.white.withOpacity(0.1),
               ),
+              const SizedBox(width: 4),
+
+              // Delete Container Button (Trash 🗑️)
+              _buildActionButton(
+                context,
+                tooltip: container.isRunning ? 'Stop container before removing or force remove' : 'Remove Container',
+                icon: Icons.delete_outline_rounded,
+                color: const Color(0xFFFF5252),
+                enabled: !isLoading,
+                isSpinning: isLoading && actionType == 'removing',
+                onPressed: () => _confirmDeleteContainer(context, provider),
+              ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteContainer(BuildContext context, DockerProvider provider) {
+    final isRunning = container.isRunning;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E222D),
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Color(0xFFFF5252), size: 24),
+            const SizedBox(width: 10),
+            Text(
+              'Remove Container?',
+              style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: Text(
+          isRunning
+              ? 'Container "${container.cleanName}" is currently running. Removing it will FORCE stop it (-f).\n\nDo you want to proceed?'
+              : 'Are you sure you want to permanently remove container "${container.cleanName}" (${container.shortId})?',
+          style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 13, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text('Cancel', style: TextStyle(color: Colors.white.withOpacity(0.6))),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              provider.removeContainer(container.id, force: isRunning);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF5252),
+              foregroundColor: Colors.white,
+            ),
+            child: Text(isRunning ? 'Force Remove' : 'Remove'),
           ),
         ],
       ),
