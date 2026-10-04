@@ -4,7 +4,9 @@ import '../models/container_profile.dart';
 import '../providers/docker_provider.dart';
 
 class LaunchContainerDialog extends StatefulWidget {
-  const LaunchContainerDialog({super.key});
+  final String? initialImage;
+
+  const LaunchContainerDialog({super.key, this.initialImage});
 
   @override
   State<LaunchContainerDialog> createState() => _LaunchContainerDialogState();
@@ -29,10 +31,13 @@ class _LaunchContainerDialogState extends State<LaunchContainerDialog> {
   @override
   void initState() {
     super.initState();
-    // Default to first built-in profile (Alpine Keep-Alive)
-    final profiles = ContainerProfile.builtInProfiles;
-    if (profiles.isNotEmpty) {
-      _applyProfile(profiles.first);
+    if (widget.initialImage != null && widget.initialImage!.isNotEmpty) {
+      _imageController.text = widget.initialImage!;
+    } else {
+      final profiles = ContainerProfile.builtInProfiles;
+      if (profiles.isNotEmpty) {
+        _applyProfile(profiles.first);
+      }
     }
   }
 

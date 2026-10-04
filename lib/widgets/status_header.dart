@@ -68,10 +68,39 @@ class StatusHeader extends StatelessWidget {
                           Text(
                             'Linux Docker Engine Monitor',
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.6),
+                              color: Colors.white.withValues(alpha: 0.6),
                               fontSize: 12,
                             ),
                             overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 20),
+
+                    // Navigation View Switcher Tabs
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF141721),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildTabButton(
+                            title: 'Containers (${provider.totalCount})',
+                            icon: Icons.inventory_2_rounded,
+                            isSelected: provider.activeTabIndex == 0,
+                            onTap: () => provider.setActiveTab(0),
+                          ),
+                          const SizedBox(width: 4),
+                          _buildTabButton(
+                            title: 'Images (${provider.images.length})',
+                            icon: Icons.layers_rounded,
+                            isSelected: provider.activeTabIndex == 1,
+                            onTap: () => provider.setActiveTab(1),
                           ),
                         ],
                       ),
@@ -98,13 +127,13 @@ class StatusHeader extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
                           color: provider.autoRefreshEnabled
-                              ? const Color(0xFF007ACC).withOpacity(0.2)
-                              : Colors.white.withOpacity(0.05),
+                              ? const Color(0xFF007ACC).withValues(alpha: 0.2)
+                              : Colors.white.withValues(alpha: 0.05),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: provider.autoRefreshEnabled
                                 ? const Color(0xFF007ACC)
-                                : Colors.white.withOpacity(0.1),
+                                : Colors.white.withValues(alpha: 0.1),
                           ),
                         ),
                         child: Row(
@@ -114,7 +143,7 @@ class StatusHeader extends StatelessWidget {
                               size: 16,
                               color: provider.autoRefreshEnabled
                                   ? const Color(0xFF00B4DB)
-                                  : Colors.white.withOpacity(0.5),
+                                  : Colors.white.withValues(alpha: 0.5),
                             ),
                             const SizedBox(width: 6),
                             Text(
@@ -122,7 +151,7 @@ class StatusHeader extends StatelessWidget {
                               style: TextStyle(
                                 color: provider.autoRefreshEnabled
                                     ? Colors.white
-                                    : Colors.white.withOpacity(0.5),
+                                    : Colors.white.withValues(alpha: 0.5),
                                 fontSize: 13,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -147,19 +176,19 @@ class StatusHeader extends StatelessWidget {
                             ),
                           )
                         : const Icon(Icons.refresh_rounded, color: Colors.white70),
-                    tooltip: 'Refresh Containers',
+                    tooltip: 'Refresh Containers & Images',
                   ),
                   const SizedBox(width: 8),
 
-                  // Prune Stopped Containers Button (visible when stopped containers exist)
-                  if (provider.stoppedCount > 0) ...[
+                  // Prune Stopped Containers Button (visible when containers tab is active & stopped exist)
+                  if (provider.activeTabIndex == 0 && provider.stoppedCount > 0) ...[
                     OutlinedButton.icon(
                       onPressed: () => _confirmPruneContainers(context, provider),
                       icon: const Icon(Icons.cleaning_services_rounded, size: 16),
                       label: Text('Prune Stopped (${provider.stoppedCount})'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFFFF5252),
-                        side: BorderSide(color: const Color(0xFFFF5252).withOpacity(0.4)),
+                        side: BorderSide(color: const Color(0xFFFF5252).withValues(alpha: 0.4)),
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
@@ -192,45 +221,83 @@ class StatusHeader extends StatelessWidget {
           ),
           const SizedBox(height: 20),
 
-          // Row 2: Metric Stat Cards
+          // Row 2: Dynamic Metric Stat Cards
           Row(
-            children: [
-              Expanded(
-                child: _buildMetricCard(
-                  title: 'Total Containers',
-                  count: provider.totalCount,
-                  icon: Icons.inventory_2_rounded,
-                  accentColor: const Color(0xFF00B4DB),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: _buildMetricCard(
-                  title: 'Running',
-                  count: provider.runningCount,
-                  icon: Icons.play_circle_fill_rounded,
-                  accentColor: const Color(0xFF00E676),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: _buildMetricCard(
-                  title: 'Stopped',
-                  count: provider.stoppedCount,
-                  icon: Icons.stop_circle_rounded,
-                  accentColor: const Color(0xFFFF5252),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: _buildMetricCard(
-                  title: 'Paused',
-                  count: provider.pausedCount,
-                  icon: Icons.pause_circle_filled_rounded,
-                  accentColor: const Color(0xFFFFAB40),
-                ),
-              ),
-            ],
+            children: provider.activeTabIndex == 0
+                ? [
+                    Expanded(
+                      child: _buildMetricCard(
+                        title: 'Total Containers',
+                        count: provider.totalCount,
+                        icon: Icons.inventory_2_rounded,
+                        accentColor: const Color(0xFF00B4DB),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: _buildMetricCard(
+                        title: 'Running',
+                        count: provider.runningCount,
+                        icon: Icons.play_circle_fill_rounded,
+                        accentColor: const Color(0xFF00E676),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: _buildMetricCard(
+                        title: 'Stopped',
+                        count: provider.stoppedCount,
+                        icon: Icons.stop_circle_rounded,
+                        accentColor: const Color(0xFFFF5252),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: _buildMetricCard(
+                        title: 'Paused',
+                        count: provider.pausedCount,
+                        icon: Icons.pause_circle_filled_rounded,
+                        accentColor: const Color(0xFFFFAB40),
+                      ),
+                    ),
+                  ]
+                : [
+                    Expanded(
+                      child: _buildMetricCard(
+                        title: 'Total Images',
+                        count: provider.images.length,
+                        icon: Icons.layers_rounded,
+                        accentColor: const Color(0xFF00B4DB),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: _buildMetricCard(
+                        title: 'Active Tagged',
+                        count: provider.images.where((img) => !img.isDangling).length,
+                        icon: Icons.bookmark_added_rounded,
+                        accentColor: const Color(0xFF00E676),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: _buildMetricCard(
+                        title: 'Dangling / Unused',
+                        count: provider.images.where((img) => img.isDangling).length,
+                        icon: Icons.warning_amber_rounded,
+                        accentColor: const Color(0xFFFFAB40),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: _buildMetricCard(
+                        title: 'Profiles Built-In',
+                        count: provider.allProfiles.length,
+                        icon: Icons.apps_rounded,
+                        accentColor: const Color(0xFFAB47BC),
+                      ),
+                    ),
+                  ],
           ),
         ],
       ),
@@ -344,6 +411,44 @@ class StatusHeader extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildTabButton({
+    required String title,
+    required IconData icon,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF007ACC) : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: isSelected ? Colors.white : Colors.white54,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              title,
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.white70,
+                fontSize: 13,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

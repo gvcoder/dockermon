@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:process_run/shell.dart';
 import '../models/container_info.dart';
 import '../models/container_profile.dart';
+import '../models/image_info.dart';
 
 enum DockerHealthState {
   ok,
@@ -302,4 +303,61 @@ class DockerService {
       throw Exception(stderr.isNotEmpty ? stderr : 'Failed to prune stopped containers.');
     }
   }
+
+  /// List all local Docker images
+  Future<List<DockerImageInfo>> getImages() async {
+    const formatString = '{"Repository":"{{.Repository}}","Tag":"{{.Tag}}","ID":"{{.ID}}","CreatedSince":"{{.CreatedSince}}","Size":"{{.Size}}"}';
+    try {
+      final results = await _shell.run('docker image ls --format \'$formatString\'');
+      if (results.isEmpty) return [];
+
+      final output = results.first.stdout.toString().trim();
+      if (output.isEmpty) return [];
+
+      final List<DockerImageInfo> images = [];
+      final lines = LineSplitter.split(output);
+      for (final line in lines) {
+        if (line.trim().isEmpty) continue;
+        try {
+          final jsonMap = jsonDecode(line.trim()) as Map<String, dynamic>;
+          images.add(DockerImageInfo.fromDockerJson(jsonMap));
+        } catch (_) {}
+      }
+      return images;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Pull a Docker image from registry (Docker Hub)
+  Future<void> pullImage(String imageName) async {
+    final cleanName = imageName.trim();
+    if (cleanName.isEmpty) throw Exception('Image name cannot be empty.');
+
+    final results = await _shell.run('docker pull $cleanName');
+    if (results.isEmpty || results.first.exitCode != 0) {
+      final stderr = results.first.stderr.toString();
+      throw Exception(stderr.isNotEmpty ? stderr : 'Failed to pull image $cleanName');
+    }
+  }
+
+  /// Remove a local Docker image
+  Future<void> removeImage(String imageId, {bool force = false}) async {
+    final flag = force ? '-f' : '';
+    final results = await _shell.run('docker rmi $flag $imageId');
+    if (results.isEmpty || results.first.exitCode != 0) {
+      final stderr = results.first.stderr.toString();
+      throw Exception(stderr.isNotEmpty ? stderr : 'Failed to remove image $imageId');
+    }
+  }
+
+  /// Remove all unused images
+  Future<void> pruneImages() async {
+    final results = await _shell.run('docker image prune -a -f');
+    if (results.isEmpty || results.first.exitCode != 0) {
+      final stderr = results.first.stderr.toString();
+      throw Exception(stderr.isNotEmpty ? stderr : 'Failed to prune images.');
+    }
+  }
 }
+

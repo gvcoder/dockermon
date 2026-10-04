@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/container_info.dart';
 import '../models/container_profile.dart';
+import '../models/image_info.dart';
 import '../services/docker_service.dart';
 
 enum StatusFilter { all, running, stopped, paused }
@@ -12,11 +13,26 @@ class DockerProvider extends ChangeNotifier {
   DockerHealthResult _health = DockerHealthResult(DockerHealthState.ok, 'Checking...');
   DockerHealthResult get health => _health;
 
+  int _activeTabIndex = 0; // 0 = Containers, 1 = Images
+  int get activeTabIndex => _activeTabIndex;
+
   List<ContainerInfo> _containers = [];
   List<ContainerInfo> get containers => _containers;
 
+  List<DockerImageInfo> _images = [];
+  List<DockerImageInfo> get images => _images;
+
   String _searchQuery = '';
   String get searchQuery => _searchQuery;
+
+  String _imageSearchQuery = '';
+  String get imageSearchQuery => _imageSearchQuery;
+
+  bool _isPullingImage = false;
+  bool get isPullingImage => _isPullingImage;
+
+  String? _pullStatusMessage;
+  String? get pullStatusMessage => _pullStatusMessage;
 
   StatusFilter _selectedFilter = StatusFilter.all;
   StatusFilter get selectedFilter => _selectedFilter;
@@ -48,7 +64,11 @@ class DockerProvider extends ChangeNotifier {
     _pollingTimer?.cancel();
     _pollingTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
       if (_autoRefreshEnabled && !_isRefreshing && _health.state == DockerHealthState.ok) {
-        refreshContainers(silent: true);
+        if (_activeTabIndex == 0) {
+          refreshContainers(silent: true);
+        } else {
+          refreshImages(silent: true);
+        }
       }
     });
   }
@@ -63,6 +83,16 @@ class DockerProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setActiveTab(int index) {
+    _activeTabIndex = index;
+    if (index == 1) {
+      refreshImages(silent: true);
+    } else {
+      refreshContainers(silent: true);
+    }
+    notifyListeners();
+  }
+
   Future<void> checkHealthAndRefresh() async {
     _isRefreshing = true;
     _errorMessage = null;
@@ -72,6 +102,7 @@ class DockerProvider extends ChangeNotifier {
       _health = await _dockerService.checkHealth();
       if (_health.state == DockerHealthState.ok) {
         await refreshContainers(silent: true);
+        await refreshImages(silent: true);
       }
     } catch (e) {
       _errorMessage = e.toString();
@@ -93,8 +124,27 @@ class DockerProvider extends ChangeNotifier {
       _errorMessage = null;
     } catch (e) {
       _errorMessage = e.toString();
-      // Re-verify health on fetch error
       _health = await _dockerService.checkHealth();
+    } finally {
+      if (!silent) {
+        _isRefreshing = false;
+      }
+      notifyListeners();
+    }
+  }
+
+  Future<void> refreshImages({bool silent = false}) async {
+    if (!silent) {
+      _isRefreshing = true;
+      notifyListeners();
+    }
+
+    try {
+      final updatedList = await _dockerService.getImages();
+      _images = updatedList;
+      _errorMessage = null;
+    } catch (e) {
+      _errorMessage = e.toString();
     } finally {
       if (!silent) {
         _isRefreshing = false;
@@ -274,9 +324,74 @@ class DockerProvider extends ChangeNotifier {
     }
   }
 
+  void setImageSearchQuery(String query) {
+    _imageSearchQuery = query.trim().toLowerCase();
+    notifyListeners();
+  }
+
+  List<DockerImageInfo> get filteredImages {
+    if (_imageSearchQuery.isEmpty) return _images;
+    return _images.where((img) {
+      final matchesRepo = img.repository.toLowerCase().contains(_imageSearchQuery);
+      final matchesTag = img.tag.toLowerCase().contains(_imageSearchQuery);
+      final matchesId = img.id.toLowerCase().contains(_imageSearchQuery);
+      return matchesRepo || matchesTag || matchesId;
+    }).toList();
+  }
+
+  Future<void> pullImage(String imageName) async {
+    _isPullingImage = true;
+    _pullStatusMessage = 'Pulling image "$imageName" from registry...';
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _dockerService.pullImage(imageName);
+      await refreshImages(silent: true);
+      _pullStatusMessage = 'Successfully pulled "$imageName"!';
+    } catch (e) {
+      _errorMessage = 'Failed to pull image "$imageName": $e';
+      rethrow;
+    } finally {
+      _isPullingImage = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> removeImage(String imageId, {bool force = false}) async {
+    _actionLoadingMap[imageId] = 'removing_image';
+    notifyListeners();
+
+    try {
+      await _dockerService.removeImage(imageId, force: force);
+      await refreshImages(silent: true);
+    } catch (e) {
+      _errorMessage = 'Failed to remove image $imageId: $e';
+    } finally {
+      _actionLoadingMap.remove(imageId);
+      notifyListeners();
+    }
+  }
+
+  Future<void> pruneImages() async {
+    _isRefreshing = true;
+    notifyListeners();
+
+    try {
+      await _dockerService.pruneImages();
+      await refreshImages(silent: true);
+    } catch (e) {
+      _errorMessage = 'Failed to prune images: $e';
+    } finally {
+      _isRefreshing = false;
+      notifyListeners();
+    }
+  }
+
   @override
   void dispose() {
     _pollingTimer?.cancel();
     super.dispose();
   }
 }
+

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'providers/docker_provider.dart';
 import 'services/docker_service.dart';
 import 'widgets/container_card.dart';
+import 'widgets/images_tab_view.dart';
 import 'widgets/permission_error_view.dart';
 import 'widgets/search_filter_bar.dart';
 import 'widgets/status_header.dart';
@@ -59,22 +60,24 @@ class MainDashboardScreen extends StatelessWidget {
               const StatusHeader(),
               const SizedBox(height: 16),
 
-              // Body: Error View OR Main List
+              // Body: Error View OR Main List (Containers vs Images)
               Expanded(
                 child: healthState != DockerHealthState.ok
                     ? const PermissionErrorView()
-                    : Column(
-                        children: [
-                          // Search & Category Filter Bar
-                          const SearchFilterBar(),
-                          const SizedBox(height: 16),
+                    : provider.activeTabIndex == 0
+                        ? Column(
+                            children: [
+                              // Search & Category Filter Bar
+                              const SearchFilterBar(),
+                              const SizedBox(height: 16),
 
-                          // Container List
-                          Expanded(
-                            child: _buildContainerList(context, provider),
-                          ),
-                        ],
-                      ),
+                              // Container List
+                              Expanded(
+                                child: _buildContainerList(context, provider),
+                              ),
+                            ],
+                          )
+                        : const ImagesTabView(),
               ),
             ],
           ),
