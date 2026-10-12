@@ -28,92 +28,63 @@ class StatusHeader extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Row 1: App title & Connection status pill + Controls
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          // Row 1: App title & Connection status pill + Controls (Responsive Wrap)
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 16,
+            runSpacing: 12,
             children: [
-              Expanded(
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF007ACC), Color(0xFF00B4DB)],
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF007ACC), Color(0xFF00B4DB)],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.view_in_ar_rounded,
+                      color: Colors.white,
+                      size: 26,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'DockerMon',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
                         ),
-                        borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(
-                        Icons.view_in_ar_rounded,
-                        color: Colors.white,
-                        size: 26,
+                      const SizedBox(height: 2),
+                      Text(
+                        'Linux Docker Engine Monitor',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.6),
+                          fontSize: 12,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 14),
-                    Flexible(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'DockerMon',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.5,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Linux Docker Engine Monitor',
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.6),
-                              fontSize: 12,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 20),
-
-                    // Navigation View Switcher Tabs
-                    Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF141721),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _buildTabButton(
-                            title: 'Containers (${provider.totalCount})',
-                            icon: Icons.inventory_2_rounded,
-                            isSelected: provider.activeTabIndex == 0,
-                            onTap: () => provider.setActiveTab(0),
-                          ),
-                          const SizedBox(width: 4),
-                          _buildTabButton(
-                            title: 'Images (${provider.images.length})',
-                            icon: Icons.layers_rounded,
-                            isSelected: provider.activeTabIndex == 1,
-                            onTap: () => provider.setActiveTab(1),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                ],
               ),
 
-              // Status Pill & Action Buttons
-              Row(
+              // Status Pill & Action Buttons (Responsive Wrap)
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                runSpacing: 8,
                 children: [
                   _buildStatusPill(healthState, provider.health.message),
-                  const SizedBox(width: 16),
                   
                   // Auto Refresh Toggle
                   Tooltip(
@@ -137,6 +108,7 @@ class StatusHeader extends StatelessWidget {
                           ),
                         ),
                         child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
                               Icons.sync_rounded,
@@ -161,7 +133,6 @@ class StatusHeader extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
 
                   // Manual Refresh Button
                   IconButton(
@@ -178,10 +149,9 @@ class StatusHeader extends StatelessWidget {
                         : const Icon(Icons.refresh_rounded, color: Colors.white70),
                     tooltip: 'Refresh Containers & Images',
                   ),
-                  const SizedBox(width: 8),
 
                   // Prune Stopped Containers Button (visible when containers tab is active & stopped exist)
-                  if (provider.activeTabIndex == 0 && provider.stoppedCount > 0) ...[
+                  if (provider.activeTabIndex == 0 && provider.stoppedCount > 0)
                     OutlinedButton.icon(
                       onPressed: () => _confirmPruneContainers(context, provider),
                       icon: const Icon(Icons.cleaning_services_rounded, size: 16),
@@ -193,8 +163,6 @@ class StatusHeader extends StatelessWidget {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                  ],
 
                   // Launch Container Button
                   ElevatedButton.icon(
@@ -219,9 +187,42 @@ class StatusHeader extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
 
-          // Row 2: Dynamic Metric Stat Cards
+          // Row 2: Navigation View Switcher Tabs
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF141721),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildTabButton(
+                      title: 'Containers (${provider.totalCount})',
+                      icon: Icons.inventory_2_rounded,
+                      isSelected: provider.activeTabIndex == 0,
+                      onTap: () => provider.setActiveTab(0),
+                    ),
+                    const SizedBox(width: 4),
+                    _buildTabButton(
+                      title: 'Images (${provider.images.length})',
+                      icon: Icons.layers_rounded,
+                      isSelected: provider.activeTabIndex == 1,
+                      onTap: () => provider.setActiveTab(1),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Row 3: Dynamic Metric Stat Cards
           Row(
             children: provider.activeTabIndex == 0
                 ? [

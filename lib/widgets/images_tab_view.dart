@@ -105,54 +105,56 @@ class ImagesTabView extends StatelessWidget {
 
   Widget _buildEmptyState(BuildContext context, DockerProvider provider) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            provider.imageSearchQuery.isNotEmpty
-                ? Icons.search_off_rounded
-                : Icons.layers_clear_rounded,
-            size: 56,
-            color: Colors.white.withValues(alpha: 0.3),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            provider.imageSearchQuery.isNotEmpty
-                ? 'No images matching "${provider.imageSearchQuery}"'
-                : 'No local Docker images found',
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.7),
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              provider.imageSearchQuery.isNotEmpty
+                  ? Icons.search_off_rounded
+                  : Icons.layers_clear_rounded,
+              size: 56,
+              color: Colors.white.withValues(alpha: 0.3),
             ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            provider.imageSearchQuery.isNotEmpty
-                ? 'Try clearing your search term.'
-                : 'Click "Pull Image" to download images from Docker Hub.',
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.4),
-              fontSize: 13,
-            ),
-          ),
-          const SizedBox(height: 16),
-          if (provider.imageSearchQuery.isEmpty)
-            ElevatedButton.icon(
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (ctx) => const PullImageDialog(),
-                );
-              },
-              icon: const Icon(Icons.download_rounded, size: 18),
-              label: const Text('Pull First Image'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00B4DB),
-                foregroundColor: Colors.white,
+            const SizedBox(height: 14),
+            Text(
+              provider.imageSearchQuery.isNotEmpty
+                  ? 'No images matching "${provider.imageSearchQuery}"'
+                  : 'No local Docker images found',
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.7),
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
               ),
             ),
-        ],
+            const SizedBox(height: 6),
+            Text(
+              provider.imageSearchQuery.isNotEmpty
+                  ? 'Try clearing your search term.'
+                  : 'Click "Pull Image" to download images from Docker Hub.',
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.4),
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (provider.imageSearchQuery.isEmpty)
+              ElevatedButton.icon(
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (ctx) => const PullImageDialog(),
+                  );
+                },
+                icon: const Icon(Icons.download_rounded, size: 18),
+                label: const Text('Pull First Image'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF00B4DB),
+                  foregroundColor: Colors.white,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

@@ -15,13 +15,15 @@ void main() {
 }
 
 class DockerMonApp extends StatelessWidget {
-  const DockerMonApp({super.key});
+  final DockerProvider? provider;
+
+  const DockerMonApp({super.key, this.provider});
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => DockerProvider()),
+        ChangeNotifierProvider(create: (_) => provider ?? DockerProvider()),
       ],
       child: MaterialApp(
         title: 'DockerMon',
@@ -91,38 +93,40 @@ class MainDashboardScreen extends StatelessWidget {
 
     if (containers.isEmpty) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              provider.searchQuery.isNotEmpty
-                  ? Icons.search_off_rounded
-                  : Icons.widgets_outlined,
-              size: 56,
-              color: Colors.white.withOpacity(0.3),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              provider.searchQuery.isNotEmpty
-                  ? 'No containers matching "${provider.searchQuery}"'
-                  : 'No containers found on Docker engine',
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.7),
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                provider.searchQuery.isNotEmpty
+                    ? Icons.search_off_rounded
+                    : Icons.widgets_outlined,
+                size: 56,
+                color: Colors.white.withOpacity(0.3),
               ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              provider.searchQuery.isNotEmpty
-                  ? 'Try clearing the search query or changing filter parameters.'
-              : 'Run containers using "docker run" or Docker Compose to see them here.',
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.4),
-                fontSize: 13,
+              const SizedBox(height: 14),
+              Text(
+                provider.searchQuery.isNotEmpty
+                    ? 'No containers matching "${provider.searchQuery}"'
+                    : 'No containers found on Docker engine',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.7),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 6),
+              Text(
+                provider.searchQuery.isNotEmpty
+                    ? 'Try clearing the search query or changing filter parameters.'
+                    : 'Run containers using "docker run" or Docker Compose to see them here.',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.4),
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }

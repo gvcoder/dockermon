@@ -35,7 +35,7 @@ class ContainerInfo {
 
   ContainerState get state {
     final s = stateRaw.toLowerCase();
-    if (s.contains('running') || s == 'up') return ContainerState.running;
+    if (s.contains('running') || s.startsWith('up') || s == 'up') return ContainerState.running;
     if (s.contains('exited') || s.contains('stopped')) return ContainerState.exited;
     if (s.contains('paused')) return ContainerState.paused;
     if (s.contains('created')) return ContainerState.created;

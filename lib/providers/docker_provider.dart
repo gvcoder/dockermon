@@ -8,7 +8,7 @@ import '../services/docker_service.dart';
 enum StatusFilter { all, running, stopped, paused }
 
 class DockerProvider extends ChangeNotifier {
-  final DockerService _dockerService = DockerService();
+  final DockerService _dockerService;
 
   DockerHealthResult _health = DockerHealthResult(DockerHealthState.ok, 'Checking...');
   DockerHealthResult get health => _health;
@@ -51,8 +51,11 @@ class DockerProvider extends ChangeNotifier {
 
   Timer? _pollingTimer;
 
-  DockerProvider() {
-    init();
+  DockerProvider({DockerService? dockerService, bool autoStart = true})
+      : _dockerService = dockerService ?? DockerService() {
+    if (autoStart) {
+      init();
+    }
   }
 
   Future<void> init() async {

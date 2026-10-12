@@ -95,20 +95,22 @@ class _PullImageDialogState extends State<PullImageDialog> {
                   child: const Icon(Icons.cloud_download_rounded, color: Color(0xFF00B4DB), size: 24),
                 ),
                 const SizedBox(width: 12),
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Pull Docker Image',
-                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      'Download image from Docker Hub or private registry',
-                      style: TextStyle(color: Colors.white54, fontSize: 12),
-                    ),
-                  ],
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Pull Docker Image',
+                        style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        'Download image from Docker Hub or private registry',
+                        style: TextStyle(color: Colors.white54, fontSize: 12),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
                 ),
-                const Spacer(),
                 IconButton(
                   onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
                   icon: const Icon(Icons.close_rounded, color: Colors.white54),
